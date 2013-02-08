@@ -9,3 +9,8 @@ Another is to write similar semantics with multiple syntaxes to explore the best
 
     Anthony M. Cook 2013
 
+Note
+----
+
+You won't find the alternative (ie non-hyperluminal) languages to be idiomatic, since they are designed to match the hyperluminal semantics as closely as possible. However, feel free to contribute additional alternative versions that are more idiomatic.
+
