@@ -1,7 +1,7 @@
 Outer
 =====
 
-`Outer` in Hyperluminal refers to the object encapsulating the current object.
+In Hyperluminal `outer` refers to the object encapsulating the current object.
 
 A simple example:
 
