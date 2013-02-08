@@ -1,0 +1,50 @@
+Window: Object.subtype do
+  attribute (draw redraw size location): Lambda.auto
+
+  clear: method do
+    print 'cleared window'
+  end
+
+  (width height): (delegate to: size)
+end
+
+Button: Window.subtype do
+  attribute (text click): Lambda.auto
+
+  draw: do
+    print text
+  end
+
+  redraw: do
+    clear
+    draw
+  end
+end
+
+SayWhenWindow: Window.subtype do
+  attribute counter: 0
+
+  constant WidgetSize: 50x50
+
+  draw: do
+    print counter
+  end
+
+  redraw: do
+    counter.increment
+
+    clear
+    print counter
+  end
+
+  WhenButton: Button.subtype do
+    size: WidgetSize
+    location: (outer.width - width) (outer.height - height)
+    text: 'When!'
+
+    click do
+      outer.counter
+    end
+  end
+
+end
