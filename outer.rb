@@ -4,10 +4,10 @@ class HyperObject
       const_get self.name.split('::')[-2]
     end
 
-    def inner
+    def inner type = Module
       constants.inject(Array.new) do |list, name|
         child = const_get name
-        list << child if child.is_a? Module
+        list << child if child.is_a?(Module) && child.ancestors.include?(type)
         list
       end
     end
@@ -19,17 +19,110 @@ class HyperObject
     def subtypes
       raise NotImplementedError
     end
+
+    def attribute *attributes
+      attributes_with_types = attributes.last.is_a?(Hash) ? pop : {}
+
+      attributes_with_types.each do |name, type|
+        define_method sym, Proc.new { type.dup }
+
+        module_eval(<<-EVAL, __FILE__, __LINE__ + 1)
+          def #{name}= value
+            class << self; attr_accessor :#{name} end
+            @#{name} = value
+          end
+        EVAL
+      end
+
+      attributes.each do |name|
+        module_eval(<<-EVAL, __FILE__, __LINE__ + 1)
+          attr_accessor :#{name}
+        EVAL
+      end
+
+      nil
+    end
+
+
   end
+end
+
+module HyperExtensions
+  def delegate(*methods)
+    options = methods.pop
+    unless options.is_a?(Hash) && to = options[:to]
+      raise ArgumentError, "Delegation needs a target. Supply an options hash with a :to key as the last argument (e.g. delegate :hello, :to => :greeter)."
+    end
+
+    if options[:prefix] == true && options[:to].to_s =~ /^[^a-z_]/
+      raise ArgumentError, "Can only automatically set the delegation prefix when delegating to a method."
+    end
+
+    prefix = options[:prefix] && "#{options[:prefix] == true ? to : options[:prefix]}_" || ''
+
+    file, line = caller.first.split(':', 2)
+    line = line.to_i
+
+    methods.each do |method|
+      on_nil =
+        if options[:allow_nil]
+          'return'
+        else
+          %(raise "#{self}##{prefix}#{method} delegated to #{to}.#{method}, but #{to} is nil: \#{self.inspect}")
+        end
+
+      module_eval(<<-EOS, file, line - 1)
+        def #{prefix}#{method}(*args, &block)               # def customer_name(*args, &block)
+      #{to}.__send__(#{method.inspect}, *args, &block)  #   client.__send__(:name, *args, &block)
+        rescue NoMethodError                                # rescue NoMethodError
+          if #{to}.nil?                                     #   if client.nil?
+      #{on_nil}                                       #     return # depends on :allow_nil
+          else                                              #   else
+            raise                                           #     raise
+          end                                               #   end
+        end                                                 # end
+      EOS
+    end
+  end
+end
+
+BasicObject.extend HyperExtensions
+
+class Coordinate < HyperObject
+  def initialize *dimensions
+    @dimensions = dimensions.flatten
+  end
+
+  def x
+    @dimensions.first
+  end
+  alias_method :height, :x
+  alias_method :row, :x
+
+  def y
+    @dimensions[1]
+  end
+  alias_method :width, :y
+  alias_method :col, :y
+
+  def z
+    @dimensions[2]
+  end
+  alias_method :depth, :z
+  alias_method :layer, :z
 end
 
 class Window < HyperObject
   class << self
+    attr :size
+    delegate :width, :height, to: :size
+
     def set_size *new_size
-      @size = new_size.flatten
+      @size = Coordinate.new new_size.flatten
     end
 
     def set_location *new_location
-      @location = new_location.flatten
+      @location = Coordinate.new new_location.flatten
     end
 
     def on_draw draw_lambda
@@ -43,7 +136,7 @@ class Window < HyperObject
     def draw
       puts "drawing #{self.name}"
       @draw.call
-      children.each do |child|
+      inner(Window).each do |child|
         child.draw
       end
     end
@@ -51,31 +144,17 @@ class Window < HyperObject
     def redraw
       puts "redrawing #{self.name}"
       @redraw.call
-      children.each do |child|
+      inner(Window).each do |child|
         child.redraw
       end
     end
 
-    def width
-      @size.last
-    end
-
-    def height
-      @size.first
-    end
-
     def display *text
-      print "\e[31;1m"
-      puts text.join
-      print "\e[0m"
+      puts "\e[31;1m#{text.join}\e[0m"
     end
 
     def clear
       puts "cleared #{self.name}"
-    end
-
-    def children
-      inner.select{|child| child.ancestors.include? Window}
     end
   end
 end
@@ -116,12 +195,12 @@ class Button < Window
 end
 
 class SayWhenWindow < Window
-  set_size [100, 100]
-  WidgetSize = [50, 50]
-
   class << self
     attr :counter
   end
+  WidgetSize = [50, 50]
+
+  set_size [100, 100]
 
   on_draw lambda {
     @counter = 0
@@ -156,6 +235,5 @@ SayWhenWindow.redraw
 puts ' -- clicking button: '
 value = SayWhenWindow::WhenButton.click
 
-print ' -- return value of click: '
-puts value
+print " -- return value of click: #{value}"
 

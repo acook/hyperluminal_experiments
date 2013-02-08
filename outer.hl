@@ -1,15 +1,32 @@
 Window: Object.subtype do
-  attribute (draw redraw size location): Lambda.auto
+  attribute (draw redraw: Lambda) (size location: Coordinate)
+  width height: delegate size
+
+  draw: method do
+    @draw.call
+    inner(Window).each child do
+      child.draw
+    end
+  end
+
+  redraw: method do
+    @redraw.call
+    inner(Window).each child do
+      child.redraw
+    end
+  end
+
+  display: method do
+    print "\e[31;1m#{I.params.join}\e[0m"
+  end
 
   clear: method do
     print 'cleared window'
   end
-
-  (width height): (delegate to: size)
 end
 
 Button: Window.subtype do
-  attribute (text click): Lambda.auto
+  attribute click: Lambda text: Text
 
   draw: do
     print text
@@ -18,26 +35,30 @@ Button: Window.subtype do
   redraw: do
     clear
     draw
+    children.each child do
+      child.redraw
+    end
   end
 end
 
-SayWhenWindow: Window.subtype do
+say_when_window: Window.subtype do
   attribute counter: 0
-
   constant WidgetSize: 50x50
 
+  size: 100x100
+
   draw: do
-    print counter
+    display counter
   end
 
   redraw: do
     counter.increment
 
     clear
-    print counter
+    display counter
   end
 
-  WhenButton: Button.subtype do
+  when_window: Button.subtype do
     size: WidgetSize
     location: (outer.width - width) (outer.height - height)
     text: 'When!'
