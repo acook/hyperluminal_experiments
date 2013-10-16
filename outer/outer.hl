@@ -1,40 +1,45 @@
 Window: Object.subtype do
-  attribute (draw redraw: Lambda) (size location: Coordinate)
-  width height: delegate size
+  attribute (draw redraw):Callable (size location):Coordinate/ish # constraining attributes based on behaviour
+  delegate  (width height):@size # delegates incoming messages to an attribute
 
-  draw: method do
-    @draw.call
-    inner(Window).each child do
+  draw: method do # methods are strict about their parameters, in this case, no parameters
+    putln 'drawing \{self.defname}'.interpolate # returns copy of the string interpolated in the local scope
+    @draw.call    # attributes and methods do not share a namespace
+
+    inner(Window).each child do # iterate over the Window objects defined within this scope
       child.draw
     end
   end
 
   redraw: method do
-    @redraw.call
+    putln 'redrawing \{self.defname}'.interpolate # the \{} syntax is for the interpolation method
+    @redraw.call                                  # calls a function stored in an attribute
+
     inner(Window).each child do
       child.redraw
     end
   end
 
-  display: method do
-    print "\e[31;1m#{I.params.join}\e[0m"
+  display: func do                                    # a func is more flexible about parameters
+    putln '\e[31;1m\{I.params.join}\e[0m'.interpolate # pulling the params out programatically
   end
 
   clear: method do
-    print 'cleared window'
+    putln 'cleared window' # single quote literals are "immutable" strings, mutations generate new strings
   end
 end
 
 Button: Window.subtype do
-  attribute click: Lambda text: Text
+  attribute click:Callable text:Text/ish # the ish subobject is an Interface defined by convention
 
-  draw: do
-    print text
+  @draw: do
+    putln text
   end
 
-  redraw: do
+  @redraw: do
     clear
     draw
+
     children.each child do
       child.redraw
     end
@@ -42,28 +47,29 @@ Button: Window.subtype do
 end
 
 say_when_window: Window.subtype do
-  attribute counter: 0
-  constant WidgetSize: 50x50
+  attribute counter:0  # this attribute has a default value instead of an interface
 
-  size: 100x100
+  WidgetSize: 50x50    # captialized names are "outer attributes" available to inner objects
 
-  draw: do
-    display counter
+  @size: 100x100       # assigning attribute to a value with a Coordinate-literal
+
+  @draw: do            # storing an otherwise anonymous function in an attribute
+    display counter    # its a closure, so we can call methods on this same object
   end
 
-  redraw: do
-    counter.increment
+  @redraw: do          # attributes are private to the object
+    @counter.increment # numbers can increment themselves
 
     clear
-    display counter
+    display @counter
   end
 
-  when_window: Button.subtype do
-    size: WidgetSize
-    location: (outer.width - width) (outer.height - height)
-    text: 'When!'
+  when_button: Button.subtype do
+    @size:     WidgetSize                                    # getting value from outer
+    @location: (outer.width - width)x(outer.height - height) # constructing a coordinate
+    @text:     'When!'
 
-    click do
+    @click do
       outer.counter
     end
   end
