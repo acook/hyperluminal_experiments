@@ -7,6 +7,8 @@ but there's a few imporant differences in usage.
 Given
 -----
 
+We'll use this below, but its not really important.
+
 ~~~
 
 def some_operation [
@@ -20,6 +22,9 @@ def some_operation [
 
 Block
 -----
+
+Code blocks are a container around a set of statements.
+For the purposes of metaprogramming, its internals can be accessed using standard List/ish addressing methods.
 
 ~~~
 
