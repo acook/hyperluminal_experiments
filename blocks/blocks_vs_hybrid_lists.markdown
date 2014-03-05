@@ -49,7 +49,7 @@ def my_block_function a_block [
   def some_operation [
     obj [
       operation: "none"
-      result:"failure"
+      result:    "failure"
     ]
   ]
 
@@ -85,7 +85,7 @@ def my_list_function a_list [
   def some_operation [
     obj [
       operation: "none"
-      result:"failure"
+      result:    "failure"
     ]
   ]
 
